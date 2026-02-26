@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compound — Investment Growth Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES & THEMING
+   ═══════════════════════════════════════════ */
+:root {
+  --font-main: 'DM Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.18);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --accent: #6C5CE7;
+  --accent-light: #A29BFE;
+  --accent-glow: rgba(108, 92, 231, 0.3);
+  --green: #00B894;
+  --green-light: #55EFC4;
+  --red: #E17055;
+  --red-light: #FAB1A0;
+  --orange: #FDCB6E;
+  --blue: #74B9FF;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0A0A0F;
+  --bg-secondary: #12121A;
+  --bg-card: #1A1A26;
+  --bg-card-hover: #22222F;
+  --bg-input: #14141E;
+  --border: rgba(255,255,255,0.06);
+  --border-focus: rgba(108, 92, 231, 0.5);
+  --text-primary: #F0F0F5;
+  --text-secondary: #8A8A9A;
+  --text-muted: #55556A;
+  --chart-grid: rgba(255,255,255,0.04);
+  --scrollbar-track: #12121A;
+  --scrollbar-thumb: #2A2A3A;
+}
+
+[data-theme="light"] {
+  --bg-primary: #F5F5FA;
+  --bg-secondary: #EBEBF2;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8F8FF;
+  --bg-input: #F0F0F8;
+  --border: rgba(0,0,0,0.07);
+  --border-focus: rgba(108, 92, 231, 0.5);
+  --text-primary: #1A1A2E;
+  --text-secondary: #6A6A82;
+  --text-muted: #9A9AB0;
+  --chart-grid: rgba(0,0,0,0.05);
+  --scrollbar-track: #EBEBF2;
+  --scrollbar-thumb: #CCCCDD;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.1);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 15px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════ */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: white;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: calc(100vh - 60px);
+}
+
+@media (max-width: 1100px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .sidebar { max-height: 50vh; overflow-y: auto; }
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR (INPUTS)
+   ═══════════════════════════════════════════ */
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+
+.input-section:hover {
+  border-color: rgba(108, 92, 231, 0.15);
+}
+
+.section-header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+}
+
+.section-header:hover { background: var(--bg-card-hover); }
+
+.section-header h3 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-header .chevron {
+  transition: transform var(--transition);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.input-section.collapsed .section-body { display: none; }
+.input-section.collapsed .chevron { transform: rotate(-90deg); }
+
+.section-body {
+  padding: 4px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Form elements */
+.field { display: flex; flex-direction: column; gap: 4px; }
+
+.field label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+
+.field input, .field select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  transition: all var(--transition);
+  outline: none;
+  width: 100%;
+}
+
+.field input:focus, .field select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.field input::placeholder { color: var(--text-muted); }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field-error {
+  font-size: 0.7rem;
+  color: var(--red);
+  display: none;
+}
+
+.field input.invalid { border-color: var(--red); }
+.field input.invalid ~ .field-error { display: block; }
+
+/* Range slider */
+.range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.range-wrap input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  border: none;
+  padding: 0;
+}
+
+.range-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.15s;
+}
+
+.range-wrap input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.range-value {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--accent-light);
+  min-width: 46px;
+  text-align: right;
+}
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.toggle-row label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all var(--transition);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all var(--transition);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: white;
+}
+
+/* Scenario presets */
+.preset-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.preset-chip:hover { border-color: var(--accent); color: var(--accent-light); }
+.preset-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* One-time additions table */
+.additions-table {
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+.additions-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 4px 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.additions-table td {
+  padding: 4px 6px;
+}
+
+.additions-table input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  width: 100%;
+  font-family: var(--font-main);
+  outline: none;
+}
+
+.additions-table input:focus {
+  border-color: var(--border-focus);
+}
+
+.btn-small {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-small:hover { border-color: var(--accent); color: var(--accent-light); }
+
+.btn-small.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT
+   ═══════════════════════════════════════════ */
+.content {
+  padding: 24px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--card-accent, var(--accent));
+  opacity: 0.7;
+  transition: opacity var(--transition);
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(108, 92, 231, 0.15);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-card:hover::before { opacity: 1; }
+
+.kpi-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  font-family: var(--font-main);
+  line-height: 1.1;
+}
+
+.kpi-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+
+.kpi-card.green .kpi-value { color: var(--green); }
+.kpi-card.green { --card-accent: var(--green); }
+.kpi-card.orange .kpi-value { color: var(--orange); }
+.kpi-card.orange { --card-accent: var(--orange); }
+.kpi-card.red .kpi-value { color: var(--red); }
+.kpi-card.red { --card-accent: var(--red); }
+.kpi-card.blue .kpi-value { color: var(--blue); }
+.kpi-card.blue { --card-accent: var(--blue); }
+
+/* Chart cards */
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  transition: all var(--transition);
+}
+
+.chart-card:hover {
+  border-color: rgba(108, 92, 231, 0.1);
+}
+
+.chart-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-title .tag {
+  font-size: 0.68rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--accent-glow);
+  color: var(--accent-light);
+  font-weight: 500;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 320px;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .charts-row { grid-template-columns: 1fr; }
+}
+
+/* Table */
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.table-card .chart-title {
+  padding: 16px 20px 0;
+}
+
+.data-table-wrap {
+  overflow-x: auto;
+  padding: 0 6px 6px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.data-table th {
+  padding: 10px 14px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+}
+
+.data-table th:first-child { text-align: left; }
+
+.data-table td {
+  padding: 10px 14px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.data-table td:first-child {
+  text-align: left;
+  font-family: var(--font-main);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.data-table tr:hover td { background: var(--bg-card-hover); }
+.data-table tr:last-child td { border-bottom: none; }
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.btn-accent {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.btn-accent:hover {
+  background: var(--accent-light);
+  border-color: var(--accent-light);
+}
+
+.actions-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+/* Methodology collapsible */
+.methodology {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.methodology summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.methodology summary::-webkit-details-marker { display: none; }
+.methodology summary::before { content: '📐'; }
+
+.methodology .method-body {
+  padding: 0 20px 20px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.methodology .method-body p { margin-bottom: 10px; }
+.methodology .method-body code {
+  font-family: var(--font-mono);
+  background: var(--bg-input);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.modal textarea {
+  width: 100%;
+  min-height: 200px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+}
+
+.modal textarea:focus { border-color: var(--border-focus); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Goal seek */
+.goal-seek-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 600px) {
+  .goal-seek-row { grid-template-columns: 1fr; }
+}
+
+/* Monte Carlo band legend */
+.mc-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mc-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mc-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Animated entrance */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+.animate-in:nth-child(1) { animation-delay: 0.05s; }
+.animate-in:nth-child(2) { animation-delay: 0.1s; }
+.animate-in:nth-child(3) { animation-delay: 0.15s; }
+.animate-in:nth-child(4) { animation-delay: 0.2s; }
+.animate-in:nth-child(5) { animation-delay: 0.25s; }
+.animate-in:nth-child(6) { animation-delay: 0.3s; }
+
+/* Contribution timing radio */
+.radio-group {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.radio-group label {
+  flex: 1;
+  text-align: center;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+  color: var(--text-muted);
+}
+
+.radio-group input { display: none; }
+.radio-group input:checked + label {
+  background: var(--accent);
+  color: white;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">◈</div>
+    <span>Compound</span>
+  </div>
+  <div class="header-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark/light mode">🌙</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════
+     MAIN LAYOUT
+     ═══════════════════════════════════════════ -->
+<div class="main-layout">
+
+  <!-- SIDEBAR: Inputs -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Core Parameters -->
+    <div class="input-section" id="sec-core">
+      <div class="section-header" onclick="toggleSection('sec-core')">
+        <h3>💰 Core Parameters</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Initial Investment (€)</label>
+          <input type="number" id="initialInvestment" value="10000" min="0" step="100">
+        </div>
+        <div class="field">
+          <label>Time Horizon (years)</label>
+          <input type="number" id="horizon" value="20" min="1" max="80" step="1">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Expected CAGR (%)</label>
+            <input type="number" id="cagr" value="8" min="-20" max="50" step="0.1">
+          </div>
+          <div class="field">
+            <label>Volatility (%)</label>
+            <input type="number" id="volatility" value="15" min="0" max="80" step="0.5">
+          </div>
+        </div>
+        <div class="field">
+          <label>Risk Level</label>
+          <div class="range-wrap">
+            <input type="range" id="riskLevel" min="1" max="10" value="5">
+            <span class="range-value" id="riskLevelVal">5</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Max Drawdown Assumption (%)</label>
+          <input type="number" id="maxDrawdown" value="30" min="0" max="100" step="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Contributions -->
+    <div class="input-section" id="sec-contrib">
+      <div class="section-header" onclick="toggleSection('sec-contrib')">
+        <h3>📥 Contributions</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>Amount (€)</label>
+            <input type="number" id="contribAmount" value="500" min="0" step="50">
+          </div>
+          <div class="field">
+            <label>Frequency</label>
+            <select id="contribFreq">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Contribution Growth (%/year)</label>
+          <input type="number" id="contribGrowth" value="2" min="0" max="30" step="0.5">
+        </div>
+        <div class="field">
+          <label>Timing</label>
+          <div class="radio-group">
+            <input type="radio" name="timing" id="timingStart" value="start" checked>
+            <label for="timingStart">Start of period</label>
+            <input type="radio" name="timing" id="timingEnd" value="end">
+            <label for="timingEnd">End of period</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- One-time Additions -->
+    <div class="input-section collapsed" id="sec-additions">
+      <div class="section-header" onclick="toggleSection('sec-additions')">
+        <h3>📅 One-time Additions</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <table class="additions-table">
+          <thead><tr><th>Year</th><th>Month</th><th>Amount (€)</th><th></th></tr></thead>
+          <tbody id="additionsBody"></tbody>
+        </table>
+        <button class="btn-small" onclick="addOneTimeAddition()">+ Add entry</button>
+      </div>
+    </div>
+
+    <!-- Fees -->
+    <div class="input-section" id="sec-fees">
+      <div class="section-header" onclick="toggleSection('sec-fees')">
+        <h3>🏷️ Fees & Costs</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>Management Fee (%/year)</label>
+            <input type="number" id="mgmtFee" value="0.5" min="0" max="5" step="0.05">
+          </div>
+          <div class="field">
+            <label>Transaction Fee (€)</label>
+            <input type="number" id="txFee" value="0" min="0" step="0.5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inflation & Taxes -->
+    <div class="input-section" id="sec-inflation">
+      <div class="section-header" onclick="toggleSection('sec-inflation')">
+        <h3>📊 Inflation & Taxes</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Inflation Rate (%/year)</label>
+          <input type="number" id="inflation" value="2.5" min="0" max="20" step="0.1">
+        </div>
+        <div class="toggle-row">
+          <label>Show Real (Inflation-Adjusted) Returns</label>
+          <div class="toggle">
+            <input type="checkbox" id="showReal">
+            <span class="toggle-slider"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Capital Gains Tax (%)</label>
+          <input type="number" id="capGainsTax" value="0" min="0" max="60" step="0.5">
+        </div>
+        <div class="toggle-row">
+          <label>Tax Applied at End (vs yearly)</label>
+          <div class="toggle">
+            <input type="checkbox" id="taxAtEnd" checked>
+            <span class="toggle-slider"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenarios -->
+    <div class="input-section" id="sec-scenarios">
+      <div class="section-header" onclick="toggleSection('sec-scenarios')">
+        <h3>🎯 Scenarios</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="preset-chips">
+          <div class="preset-chip active" data-preset="base" onclick="selectPreset(this)">Base</div>
+          <div class="preset-chip" data-preset="optimistic" onclick="selectPreset(this)">Optimistic</div>
+          <div class="preset-chip" data-preset="pessimistic" onclick="selectPreset(this)">Pessimistic</div>
+        </div>
+        <div class="field-row" style="margin-top:10px;">
+          <div class="field">
+            <label>Optimistic CAGR (%)</label>
+            <input type="number" id="optCagr" value="12" step="0.5">
+          </div>
+          <div class="field">
+            <label>Pessimistic CAGR (%)</label>
+            <input type="number" id="pessCagr" value="4" step="0.5">
+          </div>
+        </div>
+        <div class="field">
+          <label>Stress Year (drawdown applied)</label>
+          <input type="number" id="stressYear" value="10" min="1" step="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Monte Carlo -->
+    <div class="input-section collapsed" id="sec-mc">
+      <div class="section-header" onclick="toggleSection('sec-mc')">
+        <h3>🎲 Monte Carlo Simulation</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="toggle-row">
+          <label>Enable Monte Carlo</label>
+          <div class="toggle">
+            <input type="checkbox" id="mcEnabled">
+            <span class="toggle-slider"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Number of Simulations</label>
+          <div class="range-wrap">
+            <input type="range" id="mcRuns" min="100" max="2000" value="500" step="100">
+            <span class="range-value" id="mcRunsVal">500</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goal Seek -->
+    <div class="input-section collapsed" id="sec-goal">
+      <div class="section-header" onclick="toggleSection('sec-goal')">
+        <h3>🎯 Goal Seek</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Target Final Value (€)</label>
+          <input type="number" id="goalTarget" value="500000" min="0" step="10000">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Solve for</label>
+            <select id="goalSolveFor">
+              <option value="contribution">Monthly Contribution</option>
+              <option value="cagr">Required CAGR</option>
+            </select>
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <button class="btn btn-accent" onclick="solveGoal()" style="width:100%;">Solve</button>
+          </div>
+        </div>
+        <div id="goalResult" style="font-family:var(--font-mono);font-size:0.85rem;color:var(--green);padding:6px 0;display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Export/Import -->
+    <div class="actions-bar" style="margin-top:10px;">
+      <button class="btn" onclick="exportCSV()">📄 CSV</button>
+      <button class="btn" onclick="exportJSON()">💾 JSON</button>
+      <button class="btn" onclick="showImportModal()">📂 Import</button>
+    </div>
+
+  </aside>
+
+  <!-- CONTENT: Outputs -->
+  <main class="content" id="content">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card animate-in">
+        <div class="kpi-label">Final Value</div>
+        <div class="kpi-value" id="kpiFinal">—</div>
+        <div class="kpi-sub" id="kpiFinalReal"></div>
+      </div>
+      <div class="kpi-card green animate-in">
+        <div class="kpi-label">Total Gains</div>
+        <div class="kpi-value" id="kpiGains">—</div>
+        <div class="kpi-sub" id="kpiGainsPct"></div>
+      </div>
+      <div class="kpi-card animate-in">
+        <div class="kpi-label">Total Contributed</div>
+        <div class="kpi-value" id="kpiContributed">—</div>
+        <div class="kpi-sub" id="kpiContribSub"></div>
+      </div>
+      <div class="kpi-card blue animate-in">
+        <div class="kpi-label">Net CAGR</div>
+        <div class="kpi-value" id="kpiNetCagr">—</div>
+        <div class="kpi-sub">after fees</div>
+      </div>
+      <div class="kpi-card orange animate-in">
+        <div class="kpi-label">Worst Drawdown</div>
+        <div class="kpi-value" id="kpiDrawdown">—</div>
+        <div class="kpi-sub" id="kpiDrawdownSub"></div>
+      </div>
+      <div class="kpi-card animate-in">
+        <div class="kpi-label">Time to Double</div>
+        <div class="kpi-value" id="kpiDouble">—</div>
+        <div class="kpi-sub">Rule of 72</div>
+      </div>
+    </div>
+
+    <!-- Primary Chart -->
+    <div class="chart-card animate-in">
+      <div class="chart-title">
+        Portfolio Value Over Time
+        <span class="tag" id="chartTag">Base Scenario</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chartMain"></canvas></div>
+      <div class="mc-legend" id="mcLegend" style="display:none;">
+        <span><span class="dot" style="background:var(--accent)"></span> Median (P50)</span>
+        <span><span class="dot" style="background:rgba(108,92,231,0.3)"></span> P10–P90 Band</span>
+        <span><span class="dot" style="background:var(--green)"></span> Best Case</span>
+        <span><span class="dot" style="background:var(--red)"></span> Worst Case</span>
+      </div>
+    </div>
+
+    <!-- Two charts row -->
+    <div class="charts-row">
+      <div class="chart-card animate-in">
+        <div class="chart-title">Contributions vs Gains</div>
+        <div class="chart-wrap"><canvas id="chartStacked"></canvas></div>
+      </div>
+      <div class="chart-card animate-in">
+        <div class="chart-title">Scenario Comparison</div>
+        <div class="chart-wrap"><canvas id="chartScenario"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Yearly Table -->
+    <div class="table-card animate-in">
+      <div class="chart-title">Year-by-Year Breakdown</div>
+      <div class="data-table-wrap" style="max-height:420px;overflow-y:auto;">
+        <table class="data-table" id="yearlyTable">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Start Value</th>
+              <th>Contributions</th>
+              <th>Growth</th>
+              <th>Fees</th>
+              <th>End Value</th>
+              <th>Cumulative Contrib.</th>
+            </tr>
+          </thead>
+          <tbody id="yearlyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Methodology -->
+    <details class="methodology animate-in">
+      <summary>Methodology & Assumptions</summary>
+      <div class="method-body">
+        <p><strong>Compounding:</strong> Discrete compounding at the selected contribution frequency. The per-period growth rate is calculated as <code>(1 + net_annual_rate)^(1/periods_per_year) - 1</code>.</p>
+        <p><strong>Net annual rate:</strong> <code>CAGR - Annual Management Fee</code>. This simplification assumes fees are proportionally deducted from growth.</p>
+        <p><strong>Contributions:</strong> Added at the start or end of each period (user selectable). Each contribution is reduced by the transaction fee. Contribution amounts grow annually by the specified growth rate.</p>
+        <p><strong>One-time additions:</strong> Added at the start of the specified month. They are also subject to the transaction fee.</p>
+        <p><strong>Inflation:</strong> Real values are computed by dividing nominal values by <code>(1 + inflation)^years</code>.</p>
+        <p><strong>Max Drawdown / Stress:</strong> In stress mode, the portfolio is reduced by the specified drawdown percentage at the start of the chosen stress year. Recovery time is estimated based on the net CAGR.</p>
+        <p><strong>Taxes:</strong> If "Tax at End" is selected, capital gains tax is applied to total gains at the end of the horizon. Otherwise, gains are taxed annually (simplified).</p>
+        <p><strong>Monte Carlo:</strong> Each simulation generates per-period returns sampled from a normal distribution with mean = per-period rate and std = annualized volatility / sqrt(periods/year). P10, P50, and P90 percentiles are reported.</p>
+        <p><strong>Worst-year drawdown estimate:</strong> Approximated as <code>CAGR - 2 × Volatility</code> (a rough heuristic).</p>
+        <p><strong>Time to double:</strong> Uses the Rule of 72: <code>72 / net_CAGR</code>.</p>
+        <p><strong>Disclaimer:</strong> This is a simplified model for educational purposes only. It does not constitute financial advice. Actual investment returns vary and are not guaranteed.</p>
+      </div>
+    </details>
+
+  </main>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>Import Settings (JSON)</h2>
+    <textarea id="importText" placeholder="Paste your exported JSON here..."></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   STATE & CONFIGURATION
+   ═══════════════════════════════════════════ */
+
+const FREQ_MAP = { monthly: 12, quarterly: 4, yearly: 1 };
+
+// Chart instances
+let chartMain = null;
+let chartStacked = null;
+let chartScenario = null;
+
+// Debounce timer
+let debounceTimer = null;
+
+// One-time additions state
+let oneTimeAdditions = [];
+
+/* ═══════════════════════════════════════════
+   INPUT HELPERS
+   ═══════════════════════════════════════════ */
+
+function getVal(id, fallback = 0) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? fallback : v;
+}
+
+function getInputs() {
+  return {
+    initialInvestment: getVal('initialInvestment', 10000),
+    horizon: Math.max(1, Math.round(getVal('horizon', 20))),
+    cagr: getVal('cagr', 8) / 100,
+    volatility: getVal('volatility', 15) / 100,
+    maxDrawdown: getVal('maxDrawdown', 30) / 100,
+    contribAmount: getVal('contribAmount', 500),
+    contribFreq: document.getElementById('contribFreq').value,
+    contribGrowth: getVal('contribGrowth', 0) / 100,
+    contribTiming: document.querySelector('input[name="timing"]:checked').value,
+    mgmtFee: getVal('mgmtFee', 0.5) / 100,
+    txFee: getVal('txFee', 0),
+    inflation: getVal('inflation', 2.5) / 100,
+    showReal: document.getElementById('showReal').checked,
+    capGainsTax: getVal('capGainsTax', 0) / 100,
+    taxAtEnd: document.getElementById('taxAtEnd').checked,
+    optCagr: getVal('optCagr', 12) / 100,
+    pessCagr: getVal('pessCagr', 4) / 100,
+    stressYear: Math.max(1, Math.round(getVal('stressYear', 10))),
+    mcEnabled: document.getElementById('mcEnabled').checked,
+    mcRuns: parseInt(document.getElementById('mcRuns').value) || 500,
+    oneTimeAdditions: [...oneTimeAdditions]
+  };
+}
+
+/* ═══════════════════════════════════════════
+   CALCULATION ENGINE
+   ═══════════════════════════════════════════ */
+
+function simulate(inputs, cagrOverride = null, applyStress = false) {
+  const {
+    initialInvestment, horizon, volatility, maxDrawdown,
+    contribAmount, contribFreq, contribGrowth, contribTiming,
+    mgmtFee, txFee, inflation, showReal, capGainsTax, taxAtEnd,
+    stressYear, oneTimeAdditions
+  } = inputs;
+
+  const cagr = cagrOverride !== null ? cagrOverride : inputs.cagr;
+  const periodsPerYear = FREQ_MAP[contribFreq];
+  const totalPeriods = horizon * periodsPerYear;
+  const netAnnualRate = cagr - mgmtFee;
+  const periodRate = Math.pow(1 + netAnnualRate, 1 / periodsPerYear) - 1;
+
+  let portfolio = initialInvestment;
+  let totalContributions = initialInvestment;
+  let totalFees = 0;
+
+  // Track per-year data
+  const yearlyData = [];
+  const periodValues = [initialInvestment]; // index 0 = start
+  const periodContribs = [initialInvestment];
+
+  let currentContrib = contribAmount;
+
+  for (let p = 1; p <= totalPeriods; p++) {
+    const currentYear = Math.ceil(p / periodsPerYear);
+    const currentMonth = Math.ceil((p / periodsPerYear) * 12);
+    const isNewYear = p % periodsPerYear === 1 || periodsPerYear === 1;
+
+    // Increase contribution at start of new year
+    if (isNewYear && currentYear > 1) {
+      currentContrib = contribAmount * Math.pow(1 + contribGrowth, currentYear - 1);
+    }
+
+    // Apply stress drawdown at start of stress year
+    if (applyStress && isNewYear && currentYear === stressYear) {
+      portfolio *= (1 - maxDrawdown);
+    }
+
+    // One-time additions (check by year and approximate month)
+    for (const ota of oneTimeAdditions) {
+      const otaMonth = (ota.year - 1) * 12 + ota.month;
+      const thisMonth = ((p - 1) / periodsPerYear) * 12 + 1;
+      if (Math.abs(otaMonth - thisMonth) < (12 / periodsPerYear / 2)) {
+        const netOta = Math.max(0, ota.amount - txFee);
+        portfolio += netOta;
+        totalContributions += ota.amount;
+        totalFees += txFee;
+      }
+    }
+
+    const netContrib = Math.max(0, currentContrib - txFee);
+    const fee = currentContrib > 0 ? txFee : 0;
+
+    if (contribTiming === 'start') {
+      portfolio += netContrib;
+      totalContributions += currentContrib;
+      totalFees += fee;
+      portfolio *= (1 + periodRate);
+    } else {
+      portfolio *= (1 + periodRate);
+      portfolio += netContrib;
+      totalContributions += currentContrib;
+      totalFees += fee;
+    }
+
+    // Annual tax on gains (simplified)
+    if (!taxAtEnd && capGainsTax > 0 && p % periodsPerYear === 0) {
+      const gains = portfolio - totalContributions;
+      if (gains > 0) {
+        // Tax a portion of annual growth (simplified)
+        const annualGrowth = portfolio * netAnnualRate;
+        const tax = Math.max(0, annualGrowth * capGainsTax);
+        portfolio -= tax;
+      }
+    }
+
+    periodValues.push(portfolio);
+    periodContribs.push(totalContributions);
+
+    // Yearly snapshot
+    if (p % periodsPerYear === 0) {
+      const year = p / periodsPerYear;
+      const startVal = yearlyData.length > 0 ? yearlyData[yearlyData.length - 1].endValue : initialInvestment;
+      const contribThisYear = totalContributions - (yearlyData.length > 0 ? yearlyData[yearlyData.length - 1].cumulativeContrib : initialInvestment);
+      const feesThisYear = totalFees - (yearlyData.length > 0 ? yearlyData[yearlyData.length - 1].cumulativeFees : 0);
+      const growth = portfolio - startVal - contribThisYear;
+
+      yearlyData.push({
+        year,
+        startValue: startVal,
+        contributions: contribThisYear,
+        growth,
+        fees: feesThisYear,
+        endValue: portfolio,
+        cumulativeContrib: totalContributions,
+        cumulativeFees: totalFees
+      });
+    }
+  }
+
+  // Apply end-of-horizon tax
+  let finalValue = portfolio;
+  if (taxAtEnd && capGainsTax > 0) {
+    const totalGains = portfolio - totalContributions;
+    if (totalGains > 0) {
+      finalValue = portfolio - totalGains * capGainsTax;
+    }
+  }
+
+  // Real values
+  const inflationFactor = Math.pow(1 + inflation, horizon);
+  const realFinal = finalValue / inflationFactor;
+
+  // Net CAGR calculation
+  const netCagr = totalContributions > 0
+    ? Math.pow(finalValue / initialInvestment, 1 / horizon) - 1
+    : 0;
+
+  // Time to double (Rule of 72)
+  const effectiveRate = (cagr - mgmtFee) * 100;
+  const timeToDouble = effectiveRate > 0 ? 72 / effectiveRate : Infinity;
+
+  // Worst-year drawdown estimate
+  const worstYear = cagr * 100 - 2 * volatility * 100;
+
+  // Generate year labels for charts
+  const currentRealYear = new Date().getFullYear();
+  const yearLabels = [];
+  for (let i = 0; i <= horizon; i++) yearLabels.push(currentRealYear + i);
+
+  // Downsample periodValues to yearly
+  const yearlyValues = [initialInvestment];
+  const yearlyContribValues = [initialInvestment];
+  for (let y = 1; y <= horizon; y++) {
+    const idx = y * periodsPerYear;
+    yearlyValues.push(periodValues[idx] || periodValues[periodValues.length - 1]);
+    yearlyContribValues.push(periodContribs[idx] || periodContribs[periodContribs.length - 1]);
+  }
+
+  return {
+    finalValue,
+    realFinal,
+    totalContributions,
+    totalGains: finalValue - totalContributions,
+    netCagr,
+    timeToDouble,
+    worstYearReturn: worstYear,
+    yearlyData,
+    yearLabels,
+    yearlyValues,
+    yearlyContribValues,
+    periodValues,
+    inflationFactor
+  };
+}
+
+/* ═══════════════════════════════════════════
+   MONTE CARLO ENGINE
+   ═══════════════════════════════════════════ */
+
+function runMonteCarlo(inputs) {
+  const { horizon, volatility, mcRuns, contribFreq } = inputs;
+  const periodsPerYear = FREQ_MAP[contribFreq];
+  const totalPeriods = horizon * periodsPerYear;
+  const netAnnualRate = inputs.cagr - inputs.mgmtFee;
+  const periodRate = Math.pow(1 + netAnnualRate, 1 / periodsPerYear) - 1;
+  const periodVol = volatility / Math.sqrt(periodsPerYear);
+
+  // Store yearly values for each run
+  const allRuns = [];
+
+  for (let run = 0; run < mcRuns; run++) {
+    let portfolio = inputs.initialInvestment;
+    let totalContrib = inputs.initialInvestment;
+    let currentContrib = inputs.contribAmount;
+    const yearlyVals = [portfolio];
+
+    for (let p = 1; p <= totalPeriods; p++) {
+      const currentYear = Math.ceil(p / periodsPerYear);
+      const isNewYear = p % periodsPerYear === 1 || periodsPerYear === 1;
+
+      if (isNewYear && currentYear > 1) {
+        currentContrib = inputs.contribAmount * Math.pow(1 + inputs.contribGrowth, currentYear - 1);
+      }
+
+      const netContrib = Math.max(0, currentContrib - inputs.txFee);
+
+      // Random return using Box-Muller
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const randomReturn = periodRate + periodVol * z;
+
+      if (inputs.contribTiming === 'start') {
+        portfolio += netContrib;
+        portfolio *= (1 + randomReturn);
+      } else {
+        portfolio *= (1 + randomReturn);
+        portfolio += netContrib;
+      }
+
+      portfolio = Math.max(0, portfolio);
+
+      if (p % periodsPerYear === 0) {
+        yearlyVals.push(portfolio);
+      }
+    }
+
+    allRuns.push(yearlyVals);
+  }
+
+  // Compute percentiles per year
+  const p10 = [], p50 = [], p90 = [];
+  const numYears = horizon + 1;
+
+  for (let y = 0; y < numYears; y++) {
+    const vals = allRuns.map(r => r[y] || 0).sort((a, b) => a - b);
+    p10.push(vals[Math.floor(mcRuns * 0.1)]);
+    p50.push(vals[Math.floor(mcRuns * 0.5)]);
+    p90.push(vals[Math.floor(mcRuns * 0.9)]);
+  }
+
+  return { p10, p50, p90 };
+}
+
+/* ═══════════════════════════════════════════
+   GOAL SEEK
+   ═══════════════════════════════════════════ */
+
+function solveGoal() {
+  const inputs = getInputs();
+  const target = getVal('goalTarget', 500000);
+  const solveFor = document.getElementById('goalSolveFor').value;
+  const resultEl = document.getElementById('goalResult');
+
+  if (solveFor === 'contribution') {
+    // Binary search for monthly contribution
+    let lo = 0, hi = 100000, mid;
+    for (let i = 0; i < 60; i++) {
+      mid = (lo + hi) / 2;
+      const testInputs = { ...inputs, contribAmount: mid, contribFreq: 'monthly' };
+      const res = simulate(testInputs);
+      if (res.finalValue < target) lo = mid; else hi = mid;
+    }
+    resultEl.textContent = `Required monthly contribution: €${mid.toFixed(2)}`;
+  } else {
+    // Binary search for CAGR
+    let lo = -0.1, hi = 1.0, mid;
+    for (let i = 0; i < 60; i++) {
+      mid = (lo + hi) / 2;
+      const res = simulate(inputs, mid);
+      if (res.finalValue < target) lo = mid; else hi = mid;
+    }
+    resultEl.textContent = `Required CAGR: ${(mid * 100).toFixed(2)}%`;
+  }
+
+  resultEl.style.display = 'block';
+}
+
+/* ═══════════════════════════════════════════
+   RENDERING
+   ═══════════════════════════════════════════ */
+
+function formatCurrency(val) {
+  if (Math.abs(val) >= 1e6) return '€' + (val / 1e6).toFixed(2) + 'M';
+  if (Math.abs(val) >= 1e4) return '€' + (val / 1e3).toFixed(1) + 'K';
+  return '€' + val.toLocaleString('en', { maximumFractionDigits: 0 });
+}
+
+function formatFull(val) {
+  return '€' + val.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getChartColors() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    grid: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
+    text: isDark ? '#8A8A9A' : '#6A6A82',
+    accent: '#6C5CE7',
+    accentLight: '#A29BFE',
+    green: '#00B894',
+    greenLight: '#55EFC4',
+    red: '#E17055',
+    orange: '#FDCB6E',
+    blue: '#74B9FF',
+  };
+}
+
+function updateKPIs(result, inputs) {
+  document.getElementById('kpiFinal').textContent = formatCurrency(result.finalValue);
+  document.getElementById('kpiFinalReal').textContent =
+    inputs.showReal ? `Real: ${formatCurrency(result.realFinal)}` : '';
+  document.getElementById('kpiGains').textContent = formatCurrency(result.totalGains);
+  document.getElementById('kpiGainsPct').textContent =
+    result.totalContributions > 0
+      ? `${((result.totalGains / result.totalContributions) * 100).toFixed(1)}% return`
+      : '';
+  document.getElementById('kpiContributed').textContent = formatCurrency(result.totalContributions);
+  document.getElementById('kpiContribSub').textContent = `over ${inputs.horizon} years`;
+  document.getElementById('kpiNetCagr').textContent = (result.netCagr * 100).toFixed(2) + '%';
+  document.getElementById('kpiDrawdown').textContent = result.worstYearReturn.toFixed(1) + '%';
+  document.getElementById('kpiDrawdownSub').textContent = 'estimated worst year';
+  document.getElementById('kpiDouble').textContent =
+    result.timeToDouble === Infinity ? '∞' : result.timeToDouble.toFixed(1) + ' yrs';
+}
+
+function updateTable(result) {
+  const tbody = document.getElementById('yearlyBody');
+  tbody.innerHTML = result.yearlyData.map(r => `
+    <tr>
+      <td>Year ${r.year}</td>
+      <td>${formatFull(r.startValue)}</td>
+      <td>${formatFull(r.contributions)}</td>
+      <td>${formatFull(r.growth)}</td>
+      <td>${formatFull(r.fees)}</td>
+      <td>${formatFull(r.endValue)}</td>
+      <td>${formatFull(r.cumulativeContrib)}</td>
+    </tr>
+  `).join('');
+}
+
+function updateCharts(result, inputs) {
+  const colors = getChartColors();
+  const labels = result.yearLabels;
+
+  // === PRIMARY CHART ===
+  const mainDatasets = [];
+
+  // Base value line
+  mainDatasets.push({
+    label: 'Portfolio Value',
+    data: result.yearlyValues,
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + '18',
+    borderWidth: 2.5,
+    fill: true,
+    tension: 0.3,
+    pointRadius: 0,
+    pointHoverRadius: 5,
+    order: 2
+  });
+
+  // Monte Carlo bands
+  if (inputs.mcEnabled) {
+    const mc = runMonteCarlo(inputs);
+    mainDatasets.push({
+      label: 'P90',
+      data: mc.p90,
+      borderColor: colors.green + '60',
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderDash: [4, 4],
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      order: 3
+    });
+    mainDatasets.push({
+      label: 'P50 (Median)',
+      data: mc.p50,
+      borderColor: colors.accentLight,
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [6, 3],
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      order: 3
+    });
+    mainDatasets.push({
+      label: 'P10',
+      data: mc.p10,
+      borderColor: colors.red + '60',
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderDash: [4, 4],
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      order: 3
+    });
+    // Band fill between P10 and P90
+    mainDatasets.push({
+      label: '_p10p90band',
+      data: mc.p90,
+      borderColor: 'transparent',
+      backgroundColor: colors.accent + '0D',
+      fill: '+1',
+      tension: 0.3,
+      pointRadius: 0,
+      order: 4
+    });
+    mainDatasets.push({
+      label: '_p10base',
+      data: mc.p10,
+      borderColor: 'transparent',
+      backgroundColor: 'transparent',
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      order: 5
+    });
+
+    document.getElementById('mcLegend').style.display = 'flex';
+  } else {
+    document.getElementById('mcLegend').style.display = 'none';
+  }
+
+  // Stress line
+  const stressResult = simulate(inputs, null, true);
+  mainDatasets.push({
+    label: 'Stress Scenario',
+    data: stressResult.yearlyValues,
+    borderColor: colors.red + '80',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [6, 4],
+    fill: false,
+    tension: 0.3,
+    pointRadius: 0,
+    order: 3
+  });
+
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(20,20,30,0.95)',
+        titleColor: '#F0F0F5',
+        bodyColor: '#A0A0B8',
+        borderColor: 'rgba(108,92,231,0.3)',
+        borderWidth: 1,
+        cornerRadius: 10,
+        padding: 12,
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+        callbacks: {
+          label: ctx => {
+            if (ctx.dataset.label.startsWith('_')) return null;
+            return `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`;
+          }
+        },
+        filter: item => !item.dataset.label.startsWith('_')
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: colors.grid },
+        ticks: { color: colors.text, font: { size: 11, family: "'DM Sans'" }, maxTicksLimit: 12 },
+        border: { display: false }
+      },
+      y: {
+        grid: { color: colors.grid },
+        ticks: {
+          color: colors.text,
+          font: { size: 11, family: "'JetBrains Mono'" },
+          callback: v => formatCurrency(v)
+        },
+        border: { display: false }
+      }
+    }
+  };
+
+  if (chartMain) chartMain.destroy();
+  chartMain = new Chart(document.getElementById('chartMain'), {
+    type: 'line',
+    data: { labels, datasets: mainDatasets },
+    options: chartOpts
+  });
+
+  // === STACKED AREA: Contributions vs Gains ===
+  const gainsData = result.yearlyValues.map((v, i) => Math.max(0, v - result.yearlyContribValues[i]));
+
+  if (chartStacked) chartStacked.destroy();
+  chartStacked = new Chart(document.getElementById('chartStacked'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Contributions',
+          data: result.yearlyContribValues,
+          borderColor: colors.blue,
+          backgroundColor: colors.blue + '30',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0
+        },
+        {
+          label: 'Gains',
+          data: gainsData,
+          borderColor: colors.green,
+          backgroundColor: colors.green + '30',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      ...chartOpts,
+      plugins: {
+        ...chartOpts.plugins,
+        tooltip: {
+          ...chartOpts.plugins.tooltip,
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+          }
+        }
+      }
+    }
+  });
+
+  // === SCENARIO COMPARISON ===
+  const optResult = simulate(inputs, inputs.optCagr);
+  const pessResult = simulate(inputs, inputs.pessCagr);
+
+  if (chartScenario) chartScenario.destroy();
+  chartScenario = new Chart(document.getElementById('chartScenario'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Optimistic',
+          data: optResult.yearlyValues,
+          borderColor: colors.green,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0
+        },
+        {
+          label: 'Base',
+          data: result.yearlyValues,
+          borderColor: colors.accent,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0
+        },
+        {
+          label: 'Pessimistic',
+          data: pessResult.yearlyValues,
+          borderColor: colors.orange,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: chartOpts
+  });
+}
+
+/* ═══════════════════════════════════════════
+   MAIN UPDATE LOOP
+   ═══════════════════════════════════════════ */
+
+function update() {
+  const inputs = getInputs();
+  const result = simulate(inputs);
+  updateKPIs(result, inputs);
+  updateCharts(result, inputs);
+  updateTable(result);
+}
+
+function debouncedUpdate() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(update, 180);
+}
+
+/* ═══════════════════════════════════════════
+   UI INTERACTIONS
+   ═══════════════════════════════════════════ */
+
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  // Re-render charts for new colors
+  setTimeout(update, 50);
+}
+
+function selectPreset(el) {
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const preset = el.dataset.preset;
+  if (preset === 'optimistic') {
+    document.getElementById('cagr').value = document.getElementById('optCagr').value;
+  } else if (preset === 'pessimistic') {
+    document.getElementById('cagr').value = document.getElementById('pessCagr').value;
+  } else {
+    document.getElementById('cagr').value = 8;
+  }
+  debouncedUpdate();
+}
+
+// Risk level slider -> volatility mapping
+document.getElementById('riskLevel').addEventListener('input', function() {
+  const val = parseInt(this.value);
+  document.getElementById('riskLevelVal').textContent = val;
+  // Map 1-10 to 5%-40% volatility
+  const vol = 5 + (val - 1) * 3.89;
+  document.getElementById('volatility').value = vol.toFixed(1);
+  debouncedUpdate();
+});
+
+document.getElementById('mcRuns').addEventListener('input', function() {
+  document.getElementById('mcRunsVal').textContent = this.value;
+  debouncedUpdate();
+});
+
+// One-time additions
+function addOneTimeAddition() {
+  oneTimeAdditions.push({ year: 5, month: 1, amount: 10000 });
+  renderAdditions();
+  debouncedUpdate();
+}
+
+function removeAddition(idx) {
+  oneTimeAdditions.splice(idx, 1);
+  renderAdditions();
+  debouncedUpdate();
+}
+
+function renderAdditions() {
+  const tbody = document.getElementById('additionsBody');
+  tbody.innerHTML = oneTimeAdditions.map((a, i) => `
+    <tr>
+      <td><input type="number" value="${a.year}" min="1" onchange="oneTimeAdditions[${i}].year=+this.value;debouncedUpdate()"></td>
+      <td><input type="number" value="${a.month}" min="1" max="12" onchange="oneTimeAdditions[${i}].month=+this.value;debouncedUpdate()"></td>
+      <td><input type="number" value="${a.amount}" min="0" step="100" onchange="oneTimeAdditions[${i}].amount=+this.value;debouncedUpdate()"></td>
+      <td><button class="btn-small danger" onclick="removeAddition(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT / IMPORT
+   ═══════════════════════════════════════════ */
+
+function exportCSV() {
+  const inputs = getInputs();
+  const result = simulate(inputs);
+  let csv = 'Year,Start Value,Contributions,Growth,Fees,End Value,Cumulative Contributions\n';
+  result.yearlyData.forEach(r => {
+    csv += `${r.year},${r.startValue.toFixed(2)},${r.contributions.toFixed(2)},${r.growth.toFixed(2)},${r.fees.toFixed(2)},${r.endValue.toFixed(2)},${r.cumulativeContrib.toFixed(2)}\n`;
+  });
+  downloadFile(csv, 'investment_projection.csv', 'text/csv');
+}
+
+function exportJSON() {
+  const inputs = getInputs();
+  const json = JSON.stringify(inputs, null, 2);
+  downloadFile(json, 'investment_settings.json', 'application/json');
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showImportModal() {
+  document.getElementById('importModal').classList.add('active');
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('active');
+}
+
+function doImport() {
+  try {
+    const data = JSON.parse(document.getElementById('importText').value);
+    const fieldMap = {
+      initialInvestment: 'initialInvestment',
+      horizon: 'horizon',
+      contribAmount: 'contribAmount',
+      contribGrowth: 'contribGrowth',
+      mgmtFee: 'mgmtFee',
+      txFee: 'txFee',
+      inflation: 'inflation',
+      capGainsTax: 'capGainsTax',
+      stressYear: 'stressYear',
+      maxDrawdown: 'maxDrawdown'
+    };
+
+    // Set numeric fields
+    for (const [key, id] of Object.entries(fieldMap)) {
+      if (data[key] !== undefined) {
+        const el = document.getElementById(id);
+        // Convert rates back to percentages
+        const pctFields = ['contribGrowth', 'mgmtFee', 'inflation', 'capGainsTax', 'maxDrawdown'];
+        el.value = pctFields.includes(key) ? (data[key] * 100) : data[key];
+      }
+    }
+
+    // CAGR and volatility (stored as decimals)
+    if (data.cagr !== undefined) document.getElementById('cagr').value = (data.cagr * 100);
+    if (data.volatility !== undefined) document.getElementById('volatility').value = (data.volatility * 100);
+    if (data.optCagr !== undefined) document.getElementById('optCagr').value = (data.optCagr * 100);
+    if (data.pessCagr !== undefined) document.getElementById('pessCagr').value = (data.pessCagr * 100);
+
+    // Select/checkbox
+    if (data.contribFreq) document.getElementById('contribFreq').value = data.contribFreq;
+    if (data.showReal !== undefined) document.getElementById('showReal').checked = data.showReal;
+    if (data.taxAtEnd !== undefined) document.getElementById('taxAtEnd').checked = data.taxAtEnd;
+    if (data.mcEnabled !== undefined) document.getElementById('mcEnabled').checked = data.mcEnabled;
+
+    // Timing
+    if (data.contribTiming) {
+      document.getElementById(data.contribTiming === 'start' ? 'timingStart' : 'timingEnd').checked = true;
+    }
+
+    // One-time additions
+    if (data.oneTimeAdditions) {
+      oneTimeAdditions = data.oneTimeAdditions;
+      renderAdditions();
+    }
+
+    closeImportModal();
+    update();
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   EVENT LISTENERS
+   ═══════════════════════════════════════════ */
+
+function initListeners() {
+  // All inputs trigger update
+  const inputIds = [
+    'initialInvestment', 'horizon', 'cagr', 'volatility', 'maxDrawdown',
+    'contribAmount', 'contribFreq', 'contribGrowth',
+    'mgmtFee', 'txFee', 'inflation', 'capGainsTax',
+    'optCagr', 'pessCagr', 'stressYear'
+  ];
+
+  inputIds.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', debouncedUpdate);
+  });
+
+  // Checkboxes and radios
+  ['showReal', 'taxAtEnd', 'mcEnabled'].forEach(id => {
+    document.getElementById(id).addEventListener('change', debouncedUpdate);
+  });
+
+  document.querySelectorAll('input[name="timing"]').forEach(el => {
+    el.addEventListener('change', debouncedUpdate);
+  });
+
+  // Close modal on overlay click
+  document.getElementById('importModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImportModal();
+  });
+
+  // Keyboard shortcut: Escape closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeImportModal();
+  });
+}
+
+/* ═══════════════════════════════════════════
+   INITIALIZATION
+   ═══════════════════════════════════════════ */
+
+document.addEventListener('DOMContentLoaded', function() {
+  initListeners();
+  renderAdditions();
+  update();
+});
+</script>
+
+</body>
+</html>
